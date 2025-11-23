@@ -249,6 +249,15 @@
                 
                 if (storeCode === searchCode) {
                     console.log('Найден магазин:', row.c[storeNumberIndex]?.v);
+                    
+                    // Форматируем дату
+                    let todayDate = row.c[todayDateIndex]?.v;
+                    if (todayDate && typeof todayDate === 'object' && todayDate.toString().includes('Date')) {
+                        // Если дата в формате Date(...), преобразуем в нормальный формат
+                        const dateObj = new Date(todayDate);
+                        todayDate = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+                    }
+                    
                     return {
                         code: storeCode,
                         storeNumber: row.c[storeNumberIndex]?.v,
@@ -260,7 +269,7 @@
                         divisionCompletion: row.c[divisionCompletionIndex]?.v,
                         divisionDynamics: row.c[divisionDynamicsIndex]?.v,
                         dailyPlan: row.c[dailyPlanIndex]?.v,
-                        todayDate: row.c[todayDateIndex]?.v
+                        todayDate: todayDate
                     };
                 }
             }
@@ -278,55 +287,75 @@
             
             // Блок "Сегодня"
             document.getElementById('todayDate').textContent = store.todayDate || '—';
-            document.getElementById('dailyPlan').textContent = store.dailyPlan || '—';
+            
+            // Форматируем план на день (убираем знаки после запятой)
+            const dailyPlan = formatNumber(store.dailyPlan);
+            document.getElementById('dailyPlan').textContent = dailyPlan;
             
             // Блок "Результаты РТТ"
             document.getElementById('period').textContent = store.period || '—';
             
-            // Форматируем проценты для выполнения плана
-            const planCompletion = formatPercentage(store.planCompletion);
+            // Форматируем проценты для выполнения плана (десятичные дроби в проценты)
+            const planCompletion = formatPercentageFromDecimal(store.planCompletion);
             document.getElementById('planCompletion').textContent = planCompletion;
             
             // Форматируем проценты для динамики
-            const dynamics = formatPercentage(store.dynamics);
+            const dynamics = formatPercentageFromDecimal(store.dynamics);
             document.getElementById('dynamics').textContent = dynamics;
             document.getElementById('dynamics').className = `value ${getDynamicsClass(store.dynamics)}`;
             
             // Блок "Результаты Дивизиона"
             document.getElementById('division').textContent = store.division || '—';
             
-            const divisionCompletion = formatPercentage(store.divisionCompletion);
+            const divisionCompletion = formatPercentageFromDecimal(store.divisionCompletion);
             document.getElementById('divisionCompletion').textContent = divisionCompletion;
             
-            const divisionDynamics = formatPercentage(store.divisionDynamics);
+            const divisionDynamics = formatPercentageFromDecimal(store.divisionDynamics);
             document.getElementById('divisionDynamics').textContent = divisionDynamics;
             document.getElementById('divisionDynamics').className = `value ${getDynamicsClass(store.divisionDynamics)}`;
         }
         
-        // Функция для форматирования процентов (убираем знаки после запятой)
-        function formatPercentage(value) {
-            if (!value) return '—';
+        // Функция для форматирования чисел (убираем знаки после запятой)
+        function formatNumber(value) {
+            if (value === null || value === undefined) return '—';
             
-            let str = String(value);
-            
-            // Если это число, преобразуем в процент
-            if (!isNaN(parseFloat(str))) {
-                const num = parseFloat(str);
-                return Math.round(num) + '%';
+            // Пытаемся преобразовать в число
+            const num = parseFloat(value);
+            if (!isNaN(num)) {
+                // Округляем до целого
+                return Math.round(num).toLocaleString('ru-RU');
             }
             
-            // Если уже строка с процентом, обрабатываем
-            str = str.replace('%', '');
-            if (!isNaN(parseFloat(str))) {
-                const num = parseFloat(str);
-                return Math.round(num) + '%';
+            // Если не число, возвращаем как есть
+            return String(value);
+        }
+        
+        // Функция для преобразования десятичных дробей в проценты (0.1 -> 10%)
+        function formatPercentageFromDecimal(value) {
+            if (value === null || value === undefined) return '—';
+            
+            // Пытаемся преобразовать в число
+            const num = parseFloat(value);
+            if (!isNaN(num)) {
+                // Умножаем на 100 и округляем до целого
+                return Math.round(num * 100) + '%';
             }
             
-            return str + '%';
+            // Если не число, возвращаем как есть с добавлением % если нет
+            let str = String(value).trim();
+            if (str && !str.includes('%')) {
+                str += '%';
+            }
+            return str;
         }
         
         function getDynamicsClass(dynamics) {
             if (!dynamics) return '';
+            const num = parseFloat(dynamics);
+            if (!isNaN(num)) {
+                return num >= 0 ? 'positive' : 'negative';
+            }
+            
             const str = String(dynamics);
             return str.includes('+') ? 'positive' : str.includes('-') ? 'negative' : '';
         }
