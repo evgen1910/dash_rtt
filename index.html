@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд магазина</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .dashboard {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: none;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        input, button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .metric {
+            margin: 15px 0;
+        }
+        
+        .label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .positive { color: #4CAF50; }
+        .negative { color: #F44336; }
+        
+        .new-year {
+            font-size: 40px;
+            margin-bottom: 15px;
+        }
+        
+        .back-btn {
+            background: #666;
+            margin-top: 10px;
+        }
+        
+        .error {
+            color: #F44336;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Экран входа -->
+        <div class="login-container" id="loginScreen">
+            <div class="new-year">🎄</div>
+            <h2>Введите код магазина</h2>
+            <p style="color: #666; margin: 15px 0;">Для доступа к вашему дашборду</p>
+            <input type="text" id="storeCode" placeholder="Код магазина" maxlength="10">
+            <button onclick="loadStoreData()">Войти</button>
+            <div class="error" id="errorMessage">Неверный код магазина</div>
+        </div>
+        
+        <!-- Дашборд -->
+        <div class="dashboard" id="dashboard">
+            <div class="header">
+                <div class="new-year">🎅</div>
+                <h2 id="storeTitle">Магазин №</h2>
+                <div id="storeDate">Дата: </div>
+            </div>
+            
+            <div class="section">
+                <h3>📊 Ваш план на месяц</h3>
+                <div class="metric">
+                    <div class="label">Период</div>
+                    <div class="value" id="period"></div>
+                </div>
+                <div class="metric">
+                    <div class="label">План на месяц</div>
+                    <div class="value" id="monthlyPlan"></div>
+                </div>
+                <div class="metric">
+                    <div class="label">Текущее выполнение</div>
+                    <div class="value" id="planCompletion"></div>
+                </div>
+                <div class="metric">
+                    <div class="label">Динамика выполнения</div>
+                    <div class="value" id="dynamics"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h3>🏢 Результаты дивизиона</h3>
+                <div class="metric">
+                    <div class="label">Дивизион</div>
+                    <div class="value" id="division"></div>
+                </div>
+                <div class="metric">
+                    <div class="label">Выполнение плана дивизиона</div>
+                    <div class="value" id="divisionCompletion"></div>
+                </div>
+                <div class="metric">
+                    <div class="label">Динамика дивизиона</div>
+                    <div class="value" id="divisionDynamics"></div>
+                </div>
+            </div>
+            
+            <div class="section">
+                <button class="back-btn" onclick="showLogin()">Назад</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_ID = '1zRaPkITru8LHpT5OMekQPfHtTZGoM5qwDAgvPwTOqJ0';
+        
+        async function loadStoreData() {
+            const code = document.getElementById('storeCode').value.trim();
+            if (!code) return;
+            
+            try {
+                const response = await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`);
+                const text = await response.text();
+                const json = JSON.parse(text.substring(47).slice(0, -2));
+                
+                const store = findStoreByCode(json, code);
+                
+                if (store) {
+                    displayStoreData(store);
+                    document.getElementById('errorMessage').style.display = 'none';
+                } else {
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+        
+        function findStoreByCode(data, code) {
+            const rows = data.table.rows;
+            const cols = data.table.cols;
+            
+            // Находим индекс колонки с кодом
+            const codeIndex = cols.findIndex(col => col.label === 'Код');
+            if (codeIndex === -1) return null;
+            
+            for (let i = 1; i < rows.length; i++) { // начинаем с 1, пропускаем заголовок
+                const row = rows[i];
+                const storeCode = row.c[codeIndex]?.v;
+                
+                if (storeCode && storeCode.toString().trim() === code) {
+                    // Собираем данные магазина
+                    return {
+                        code: storeCode,
+                        storeNumber: row.c[cols.findIndex(col => col.label === '№ магазина')]?.v,
+                        period: row.c[cols.findIndex(col => col.label === 'Период')]?.v,
+                        monthlyPlan: row.c[cols.findIndex(col => col.label === 'План на месяц')]?.v,
+                        planCompletion: row.c[cols.findIndex(col => col.label === 'Выполнение плана')]?.v,
+                        dynamics: row.c[cols.findIndex(col => col.label === 'Динамика выполнения')]?.v,
+                        division: row.c[cols.findIndex(col => col.label === 'Дивизион')]?.v,
+                        divisionCompletion: row.c[cols.findIndex(col => col.label === 'Выполнение плана Дивизиона')]?.v,
+                        divisionDynamics: row.c[cols.findIndex(col => col.label === 'Динамика Дивизиона')]?.v,
+                        todayDate: row.c[cols.findIndex(col => col.label === 'Дата сегодня')]?.v
+                    };
+                }
+            }
+            return null;
+        }
+        
+        function displayStoreData(store) {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            
+            document.getElementById('storeTitle').textContent = `Магазин № ${store.storeNumber}`;
+            document.getElementById('storeDate').textContent = `Дата: ${store.todayDate}`;
+            document.getElementById('period').textContent = store.period;
+            document.getElementById('monthlyPlan').textContent = store.monthlyPlan;
+            document.getElementById('planCompletion').textContent = store.planCompletion;
+            document.getElementById('dynamics').textContent = store.dynamics;
+            document.getElementById('dynamics').className = `value ${getDynamicsClass(store.dynamics)}`;
+            document.getElementById('division').textContent = store.division;
+            document.getElementById('divisionCompletion').textContent = store.divisionCompletion;
+            document.getElementById('divisionDynamics').textContent = store.divisionDynamics;
+            document.getElementById('divisionDynamics').className = `value ${getDynamicsClass(store.divisionDynamics)}`;
+        }
+        
+        function getDynamicsClass(dynamics) {
+            if (!dynamics) return '';
+            const str = dynamics.toString();
+            return str.includes('+') ? 'positive' : str.includes('-') ? 'negative' : '';
+        }
+        
+        function showLogin() {
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('storeCode').value = '';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+        
+        // Enter для ввода кода
+        document.getElementById('storeCode').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadStoreData();
+            }
+        });
+    </script>
+</body>
+</html>
