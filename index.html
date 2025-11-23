@@ -250,12 +250,24 @@
                 if (storeCode === searchCode) {
                     console.log('Найден магазин:', row.c[storeNumberIndex]?.v);
                     
-                    // Форматируем дату
-                    let todayDate = row.c[todayDateIndex]?.v;
-                    if (todayDate && typeof todayDate === 'object' && todayDate.toString().includes('Date')) {
-                        // Если дата в формате Date(...), преобразуем в нормальный формат
-                        const dateObj = new Date(todayDate);
-                        todayDate = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+                    // Получаем данные даты
+                    const dateCell = row.c[todayDateIndex];
+                    let todayDate = '—';
+                    
+                    if (dateCell) {
+                        // Если дата в формате Google Sheets (объект Date)
+                        if (dateCell.f) {
+                            todayDate = dateCell.f; // Используем отформатированное значение
+                        } else if (dateCell.v) {
+                            // Если это timestamp
+                            if (typeof dateCell.v === 'number') {
+                                const date = new Date((dateCell.v - 25569) * 86400 * 1000); // Конвертация из Excel timestamp
+                                todayDate = formatDate(date);
+                            } else if (typeof dateCell.v === 'string') {
+                                // Если это строка, используем как есть
+                                todayDate = dateCell.v;
+                            }
+                        }
                     }
                     
                     return {
@@ -275,6 +287,14 @@
             }
             console.log('Магазин не найден');
             return null;
+        }
+        
+        // Функция для форматирования даты в формат dd.mm.yyyy
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
         }
         
         function displayStoreData(store) {
@@ -344,6 +364,11 @@
             // Если не число, возвращаем как есть с добавлением % если нет
             let str = String(value).trim();
             if (str && !str.includes('%')) {
+                // Проверяем, если это десятичная дробь без знака процента
+                const decimalNum = parseFloat(str);
+                if (!isNaN(decimalNum)) {
+                    return Math.round(decimalNum * 100) + '%';
+                }
                 str += '%';
             }
             return str;
