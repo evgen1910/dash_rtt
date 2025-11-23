@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Дашборд магазина</title>
+    <title>Дашборд РТТ</title>
     <style>
         * {
             margin: 0;
@@ -104,6 +104,21 @@
             margin: 10px 0;
             display: none;
         }
+        
+        .today-section {
+            background: #e8f5e9;
+            margin: 10px;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+        }
     </style>
 </head>
 <body>
@@ -111,54 +126,65 @@
         <!-- Экран входа -->
         <div class="login-container" id="loginScreen">
             <div class="new-year">🎄</div>
-            <h2>Введите код магазина</h2>
+            <h2>Введите код РТТ</h2>
             <p style="color: #666; margin: 15px 0;">Для доступа к вашему дашборду</p>
-            <input type="text" id="storeCode" placeholder="Код магазина" maxlength="10">
+            <input type="text" id="storeCode" placeholder="Код РТТ" maxlength="10">
             <button onclick="loadStoreData()">Войти</button>
-            <div class="error" id="errorMessage">Неверный код магазина</div>
+            <div class="error" id="errorMessage">Неверный код РТТ</div>
         </div>
         
         <!-- Дашборд -->
         <div class="dashboard" id="dashboard">
             <div class="header">
                 <div class="new-year">🎅</div>
-                <h2 id="storeTitle">Магазин №</h2>
-                <div id="storeDate">Дата: </div>
+                <h2 id="storeTitle">РТТ №</h2>
+                <div id="storeDivision">Дивизион: </div>
             </div>
             
-            <div class="section">
-                <h3>📊 Ваш план на месяц</h3>
-                <div class="metric">
-                    <div class="label">Период</div>
-                    <div class="value" id="period"></div>
+            <!-- Блок "Сегодня" -->
+            <div class="today-section">
+                <h3>📅 Сегодня</h3>
+                <div class="data-row">
+                    <span class="label">Дата:</span>
+                    <span class="value" id="todayDate"></span>
                 </div>
-                <div class="metric">
-                    <div class="label">План на месяц</div>
-                    <div class="value" id="monthlyPlan"></div>
-                </div>
-                <div class="metric">
-                    <div class="label">Текущее выполнение</div>
-                    <div class="value" id="planCompletion"></div>
-                </div>
-                <div class="metric">
-                    <div class="label">Динамика выполнения</div>
-                    <div class="value" id="dynamics"></div>
+                <div class="data-row">
+                    <span class="label">План на день:</span>
+                    <span class="value" id="dailyPlan"></span>
                 </div>
             </div>
             
+            <!-- Блок "Результаты РТТ" -->
             <div class="section">
-                <h3>🏢 Результаты дивизиона</h3>
-                <div class="metric">
-                    <div class="label">Дивизион</div>
-                    <div class="value" id="division"></div>
+                <h3>📊 Результаты РТТ</h3>
+                <div class="data-row">
+                    <span class="label">Период:</span>
+                    <span class="value" id="period"></span>
                 </div>
-                <div class="metric">
-                    <div class="label">Выполнение плана дивизиона</div>
-                    <div class="value" id="divisionCompletion"></div>
+                <div class="data-row">
+                    <span class="label">Текущее выполнение:</span>
+                    <span class="value" id="planCompletion"></span>
                 </div>
-                <div class="metric">
-                    <div class="label">Динамика дивизиона</div>
-                    <div class="value" id="divisionDynamics"></div>
+                <div class="data-row">
+                    <span class="label">Динамика выполнения:</span>
+                    <span class="value" id="dynamics"></span>
+                </div>
+            </div>
+            
+            <!-- Блок "Результаты Дивизиона" -->
+            <div class="section">
+                <h3>🏢 Результаты Дивизиона</h3>
+                <div class="data-row">
+                    <span class="label">Дивизион:</span>
+                    <span class="value" id="division"></span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Текущее выполнение Дивизиона:</span>
+                    <span class="value" id="divisionCompletion"></span>
+                </div>
+                <div class="data-row">
+                    <span class="label">Динамика Дивизиона:</span>
+                    <span class="value" id="divisionDynamics"></span>
                 </div>
             </div>
             
@@ -194,34 +220,51 @@
             }
         }
         
-        function findStoreByCode(data, code) {
+        function findStoreByCode(data, searchCode) {
             const rows = data.table.rows;
             const cols = data.table.cols;
             
-            // Находим индекс колонки с кодом
+            // Находим индексы всех колонок
             const codeIndex = cols.findIndex(col => col.label === 'Код');
-            if (codeIndex === -1) return null;
+            const storeNumberIndex = cols.findIndex(col => col.label === '№ магазина');
+            const periodIndex = cols.findIndex(col => col.label === 'Период');
+            const monthlyPlanIndex = cols.findIndex(col => col.label === 'План на месяц');
+            const planCompletionIndex = cols.findIndex(col => col.label === 'Выполнение плана');
+            const dynamicsIndex = cols.findIndex(col => col.label === 'Динамика выполнения');
+            const divisionIndex = cols.findIndex(col => col.label === 'Дивизион');
+            const divisionCompletionIndex = cols.findIndex(col => col.label === 'Выполнение плана Дивизиона');
+            const divisionDynamicsIndex = cols.findIndex(col => col.label === 'Динамика Дивизиона');
+            const dailyPlanIndex = cols.findIndex(col => col.label === 'План на сегодня');
+            const todayDateIndex = cols.findIndex(col => col.label === 'Дата сегодня');
             
-            for (let i = 1; i < rows.length; i++) { // начинаем с 1, пропускаем заголовок
+            console.log('Ищем код:', searchCode);
+            console.log('Всего строк:', rows.length);
+            
+            for (let i = 1; i < rows.length; i++) {
                 const row = rows[i];
-                const storeCode = row.c[codeIndex]?.v;
+                if (!row.c || !row.c[codeIndex]) continue;
                 
-                if (storeCode && storeCode.toString().trim() === code) {
-                    // Собираем данные магазина
+                const storeCode = String(row.c[codeIndex].v).trim();
+                console.log(`Строка ${i}: код "${storeCode}"`);
+                
+                if (storeCode === searchCode) {
+                    console.log('Найден магазин:', row.c[storeNumberIndex]?.v);
                     return {
                         code: storeCode,
-                        storeNumber: row.c[cols.findIndex(col => col.label === '№ магазина')]?.v,
-                        period: row.c[cols.findIndex(col => col.label === 'Период')]?.v,
-                        monthlyPlan: row.c[cols.findIndex(col => col.label === 'План на месяц')]?.v,
-                        planCompletion: row.c[cols.findIndex(col => col.label === 'Выполнение плана')]?.v,
-                        dynamics: row.c[cols.findIndex(col => col.label === 'Динамика выполнения')]?.v,
-                        division: row.c[cols.findIndex(col => col.label === 'Дивизион')]?.v,
-                        divisionCompletion: row.c[cols.findIndex(col => col.label === 'Выполнение плана Дивизиона')]?.v,
-                        divisionDynamics: row.c[cols.findIndex(col => col.label === 'Динамика Дивизиона')]?.v,
-                        todayDate: row.c[cols.findIndex(col => col.label === 'Дата сегодня')]?.v
+                        storeNumber: row.c[storeNumberIndex]?.v,
+                        period: row.c[periodIndex]?.v,
+                        monthlyPlan: row.c[monthlyPlanIndex]?.v,
+                        planCompletion: row.c[planCompletionIndex]?.v,
+                        dynamics: row.c[dynamicsIndex]?.v,
+                        division: row.c[divisionIndex]?.v,
+                        divisionCompletion: row.c[divisionCompletionIndex]?.v,
+                        divisionDynamics: row.c[divisionDynamicsIndex]?.v,
+                        dailyPlan: row.c[dailyPlanIndex]?.v,
+                        todayDate: row.c[todayDateIndex]?.v
                     };
                 }
             }
+            console.log('Магазин не найден');
             return null;
         }
         
@@ -229,22 +272,62 @@
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             
-            document.getElementById('storeTitle').textContent = `Магазин № ${store.storeNumber}`;
-            document.getElementById('storeDate').textContent = `Дата: ${store.todayDate}`;
-            document.getElementById('period').textContent = store.period;
-            document.getElementById('monthlyPlan').textContent = store.monthlyPlan;
-            document.getElementById('planCompletion').textContent = store.planCompletion;
-            document.getElementById('dynamics').textContent = store.dynamics;
+            // Обновляем заголовок
+            document.getElementById('storeTitle').textContent = `РТТ № ${store.storeNumber}`;
+            document.getElementById('storeDivision').textContent = `Дивизион: ${store.division}`;
+            
+            // Блок "Сегодня"
+            document.getElementById('todayDate').textContent = store.todayDate || '—';
+            document.getElementById('dailyPlan').textContent = store.dailyPlan || '—';
+            
+            // Блок "Результаты РТТ"
+            document.getElementById('period').textContent = store.period || '—';
+            
+            // Форматируем проценты для выполнения плана
+            const planCompletion = formatPercentage(store.planCompletion);
+            document.getElementById('planCompletion').textContent = planCompletion;
+            
+            // Форматируем проценты для динамики
+            const dynamics = formatPercentage(store.dynamics);
+            document.getElementById('dynamics').textContent = dynamics;
             document.getElementById('dynamics').className = `value ${getDynamicsClass(store.dynamics)}`;
-            document.getElementById('division').textContent = store.division;
-            document.getElementById('divisionCompletion').textContent = store.divisionCompletion;
-            document.getElementById('divisionDynamics').textContent = store.divisionDynamics;
+            
+            // Блок "Результаты Дивизиона"
+            document.getElementById('division').textContent = store.division || '—';
+            
+            const divisionCompletion = formatPercentage(store.divisionCompletion);
+            document.getElementById('divisionCompletion').textContent = divisionCompletion;
+            
+            const divisionDynamics = formatPercentage(store.divisionDynamics);
+            document.getElementById('divisionDynamics').textContent = divisionDynamics;
             document.getElementById('divisionDynamics').className = `value ${getDynamicsClass(store.divisionDynamics)}`;
+        }
+        
+        // Функция для форматирования процентов (убираем знаки после запятой)
+        function formatPercentage(value) {
+            if (!value) return '—';
+            
+            let str = String(value);
+            
+            // Если это число, преобразуем в процент
+            if (!isNaN(parseFloat(str))) {
+                const num = parseFloat(str);
+                return Math.round(num) + '%';
+            }
+            
+            // Если уже строка с процентом, обрабатываем
+            str = str.replace('%', '');
+            if (!isNaN(parseFloat(str))) {
+                const num = parseFloat(str);
+                return Math.round(num) + '%';
+            }
+            
+            return str + '%';
         }
         
         function getDynamicsClass(dynamics) {
             if (!dynamics) return '';
-            const str = dynamics.toString();
+            const str = String(dynamics);
             return str.includes('+') ? 'positive' : str.includes('-') ? 'negative' : '';
         }
         
@@ -261,6 +344,9 @@
                 loadStoreData();
             }
         });
+        
+        // Фокус на поле ввода при загрузке
+        document.getElementById('storeCode').focus();
     </script>
 </body>
 </html>
